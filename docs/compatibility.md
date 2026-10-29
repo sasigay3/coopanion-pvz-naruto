@@ -25,7 +25,7 @@ The tool only reads the provided files; its output may contain hashes and offset
 
 For the examined SHA-256 only, a read-only x86 disassembly found code loading a pointer from preferred-base VA `0x006a9ec0` at RVAs `0x4e8a0` and `0x4e8c0`. The latter checks that pointer, then reads a pointer at offset `0x82c` and checks it before dereferencing it. Another instruction at RVA `0x57e0b` loads the same global and accesses an object at offset `0x768`. The global is located in the virtual range of the first `.data` section; it is not evidence that the pointer is initialized or valid at runtime.
 
-This is an **unverified candidate**, not a game profile. The instructions have not established the object types, field meanings, actual loaded base, or whether the code corresponds to the live game state. No process was started, attached to, modified, or injected to make these observations. The fields at `0x768` and `0x82c` remain unverified and are not read by the probe. Further work requires independent code-path analysis and bounded read-only verification against visible in-game states.
+This is an **unverified candidate**, not a game profile. The instructions have not established the object types, field meanings, actual loaded base, or whether the code corresponds to the live game state. No process was started, attached to, modified, or injected to make these observations. The fields at `0x768` and `0x82c` remain unverified. The optional probe can sample these words without dereferencing their values; it does not interpret their meaning. Further work requires independent code-path analysis and bounded read-only verification against visible in-game states.
 
 ## First live read-only check
 
@@ -33,7 +33,11 @@ On 2026-10-30, after backing up the two possible local save directories and aski
 
 A separate process-module query showed local modules named `gdi.dll`, `GDI42.dll`, `bass.dll`, and `UpdateCheck.dll` in that run. This is an observation, not a security assessment or a complete inventory of all files that may load later. The actual save location and any sharing with other builds remain unconfirmed.
 
-The bounded probe takes an explicit PID and executable path: `python scripts/probe_process.py --pid <pid> --executable <path>`. It verifies the file fingerprint, process image path, x86 architecture, loaded image and two on-disk code sequences before reading only the candidate global. Any mismatch stops the candidate read.
+The bounded probe takes an explicit PID and executable path: `python scripts/probe_process.py --pid <pid> --executable <path>`. It verifies the file fingerprint, process image path, x86 architecture, loaded image and two on-disk code sequences before reading the candidate global. Any mismatch stops the candidate read. With the explicit `--observe-candidate` flag, it can additionally sample five unverified 32-bit words and checks that the global pointer did not change during the sample; it never follows the sampled pointers.
+
+## Operator-provided control console
+
+The operator provided an image of an in-game control console with options labelled automatic collection, free planting, ignore cooldown, health display, and overlapping planting, plus a difficulty setting. Their real behavior, persisted state, implementation and interaction with the extension have not been verified. In particular, free planting is not the same feature as a sun reserve, a one-shot sun increase, or a bonus per verified sun collection. Future assist work should evaluate existing controls before duplicating functionality, and must independently test each requested feature and its off state.
 
 ## Compatibility matrix
 

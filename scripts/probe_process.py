@@ -26,7 +26,7 @@ def disk_bytes_at_rva(data, info, rva, size):
     raise ValueError('RVA is not backed by file data')
 
 
-def probe(pid, expected_path):
+def probe(pid, expected_path, observe_candidate=False):
     if sys.platform != 'win32':
         raise OSError('Windows is required')
     if ctypes.sizeof(ctypes.c_void_p) != 8:
@@ -104,9 +104,21 @@ def probe(pid, expected_path):
             return {'pid': pid, 'image_matches': True, 'code_matches_file': checks,
                     'candidate_checked': False, 'reason': 'runtime code differs from file'}
         pointer = struct.unpack('<I', read(base + GLOBAL_RVA, 4))[0]
-        return {'pid': pid, 'image_matches': True, 'code_matches_file': checks,
-                'loaded_at_preferred_base': base == info['image_base'],
-                'candidate_checked': True, 'candidate_nonzero': pointer != 0}
+        result = {'pid': pid, 'image_matches': True, 'code_matches_file': checks,
+                  'loaded_at_preferred_base': base == info['image_base'],
+                  'candidate_checked': True, 'candidate_nonzero': pointer != 0}
+        if observe_candidate:
+            if pointer == 0 or pointer > 0xfffff7bf:
+                raise ValueError('candidate pointer is null or outside 32-bit bounds')
+            # No pointer obtained here is dereferenced. Names are intentionally neutral:
+            # the object type and the meaning of these words remain unverified.
+            offsets = (0, 0x768, 0x7f8, 0x7fc, 0x82c)
+            words = {hex(offset): struct.unpack('<I', read(pointer + offset, 4))[0]
+                     for offset in offsets}
+            if struct.unpack('<I', read(base + GLOBAL_RVA, 4))[0] != pointer:
+                raise ValueError('candidate changed during observation')
+            result['candidate_words'] = words
+        return result
     finally:
         kernel.CloseHandle(handle)
 
@@ -115,9 +127,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--pid', required=True, type=int)
     parser.add_argument('--executable', required=True, type=Path)
+    parser.add_argument('--observe-candidate', action='store_true', help='Read five unverified words from the candidate object')
     args = parser.parse_args()
     try:
-        print(json.dumps(probe(args.pid, args.executable), indent=2))
+        print(json.dumps(probe(args.pid, args.executable, args.observe_candidate), indent=2))
     except (OSError, ValueError) as exc:
         print(json.dumps({'error': str(exc)}), file=sys.stderr)
         raise SystemExit(1)
