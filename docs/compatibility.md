@@ -21,6 +21,12 @@ python -m unittest discover -s tests
 
 The tool only reads the provided files; its output may contain hashes and offsets. Review any captured output before publishing it. Later work must verify executable and resource identity, loaded image, object layouts and calling conventions before any injection, process write or game input. Test fixtures can validate parsing but cannot prove game compatibility.
 
+## Preliminary static pointer candidate
+
+For the examined SHA-256 only, a read-only x86 disassembly found code loading a pointer from preferred-base VA `0x006a9ec0` at RVAs `0x4e8a0` and `0x4e8c0`. The latter checks that pointer, then reads a pointer at offset `0x82c` and checks it before dereferencing it. Another instruction at RVA `0x57e0b` loads the same global and accesses an object at offset `0x768`. The global is located in the virtual range of the first `.data` section; it is not evidence that the pointer is initialized or valid at runtime.
+
+This is an **unverified candidate**, not a game profile. The instructions have not established the object types, field meanings, actual loaded base, or whether the code corresponds to the live game state. No process was started, attached to, modified, or injected to make these observations. In particular, neither `0x768` nor `0x82c` is currently authorized for process reads. Further work requires independent code-path analysis and bounded read-only verification against visible in-game states.
+
 ## Compatibility matrix
 
 | Capability | Status |
