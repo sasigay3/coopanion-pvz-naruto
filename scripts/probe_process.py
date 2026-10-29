@@ -14,7 +14,7 @@ EXPECTED_HASH = 'c536aaff6679fd391ee2ddb4711b4f983f4ce0ea9b32ecc66456cead5fdc59a
 EXPECTED_SIZE = 7_340_032
 # Candidate only. Do not dereference it or treat it as an established game object.
 GLOBAL_RVA = 0x2a9ec0
-CODE_RVAS = (0x4e8a0, 0x4e8c0, 0xb069, 0x8771)
+CODE_RVAS = (0x4e8a0, 0x4e8c0, 0xb069, 0x8771, 0x1de9b, 0x5db78)
 
 
 def disk_bytes_at_rva(data, info, rva, size):
@@ -35,7 +35,9 @@ def parse_candidate_array(header):
     return {'used': used, 'capacity': capacity, 'count': count}
 
 
-def probe(pid, expected_path, observe_candidate=False, observe_sun_candidate=False, observe_plant_candidate=False):
+def probe(pid, expected_path, observe_candidate=False, observe_sun_candidate=False, observe_plant_candidate=False, observe_plant_slots=False):
+    if observe_plant_slots and not observe_plant_candidate:
+        raise ValueError('plant slots require array header observation')
     if (observe_sun_candidate or observe_plant_candidate) and not observe_candidate:
         raise ValueError('board candidate requires candidate observation')
     if sys.platform != 'win32':
@@ -142,6 +144,29 @@ def probe(pid, expected_path, observe_candidate=False, observe_sun_candidate=Fal
                     if header != read(board_candidate + 0xac, 16) + read(board_candidate + 0xbc, 12):
                         raise ValueError('candidate array changed during observation')
                     result['plant_array_candidate'] = candidate_array
+                    if observe_plant_slots:
+                        # Still requires operator confirmation of a visible, ordinary daytime board;
+                        # these candidate fields alone do not establish visibility.
+                        background_candidate = struct.unpack('<I', read(board_candidate + 0x554c, 4))[0]
+                        if words['0x7f8'] != 0 or background_candidate != 0 or candidate_array['used'] > 16:
+                            raise ValueError('plant slot research is restricted to a small candidate daytime adventure array')
+                        block = struct.unpack_from('<I', header)[0]
+                        if not block or block > 0xffffffff - 16 * 0x300:
+                            raise ValueError('candidate array block is outside 32-bit bounds')
+                        slots = []
+                        for index in range(candidate_array['used']):
+                            address = block + index * 0x300
+                            identity = struct.unpack('<I', read(address + 0x148, 4))[0]
+                            if not identity >> 16 or (identity & 0xffff) != index:
+                                continue
+                            values = {hex(offset): struct.unpack('<I', read(address + offset, 4))[0]
+                                      for offset in (0x1c, 0x24, 0x28)}
+                            if struct.unpack('<I', read(address + 0x148, 4))[0] != identity:
+                                raise ValueError('candidate slot changed during observation')
+                            slots.append({'index': index, 'words': values})
+                        if header != read(board_candidate + 0xac, 16) + read(board_candidate + 0xbc, 12):
+                            raise ValueError('candidate array changed while reading slots')
+                        result['plant_slot_candidates'] = slots
                 # Discard if either pointer changed during the bounded read.
                 if (struct.unpack('<I', read(base + GLOBAL_RVA, 4))[0] != pointer or
                     struct.unpack('<I', read(pointer + 0x768, 4))[0] != board_candidate):
@@ -158,9 +183,10 @@ def main():
     parser.add_argument('--observe-candidate', action='store_true', help='Read five unverified words from the candidate object')
     parser.add_argument('--observe-sun-candidate', action='store_true', help='Read one unverified word from the board candidate (requires --observe-candidate)')
     parser.add_argument('--observe-plant-candidate', action='store_true', help='Read an unverified array header (requires --observe-candidate)')
+    parser.add_argument('--observe-plant-slots', action='store_true', help='Only on an operator-confirmed visible daytime board: read bounded unverified slots')
     args = parser.parse_args()
     try:
-        print(json.dumps(probe(args.pid, args.executable, args.observe_candidate, args.observe_sun_candidate, args.observe_plant_candidate), indent=2))
+        print(json.dumps(probe(args.pid, args.executable, args.observe_candidate, args.observe_sun_candidate, args.observe_plant_candidate, args.observe_plant_slots), indent=2))
     except (OSError, ValueError) as exc:
         print(json.dumps({'error': str(exc)}), file=sys.stderr)
         raise SystemExit(1)
