@@ -33,11 +33,17 @@ On 2026-10-30, after backing up the two possible local save directories and aski
 
 A separate process-module query showed local modules named `gdi.dll`, `GDI42.dll`, `bass.dll`, and `UpdateCheck.dll` in that run. This is an observation, not a security assessment or a complete inventory of all files that may load later. The actual save location and any sharing with other builds remain unconfirmed.
 
-The bounded probe takes an explicit PID and executable path: `python scripts/probe_process.py --pid <pid> --executable <path>`. It verifies the file fingerprint, process image path, x86 architecture, loaded image and three eight-byte on-disk code prefixes before reading the candidate global. Any mismatch stops the candidate read. With the explicit `--observe-candidate` flag, it can additionally sample five unverified 32-bit words and checks that the global pointer did not change during the sample; With a second explicit `--observe-sun-candidate` flag, it follows the candidate at offset `0x768` only when the word at `0x7fc` is 3, reads one word at `0x5560`, then checks both pointers again. These values are still unverified and do not authorize game actions.
+The bounded probe takes an explicit PID and executable path: `python scripts/probe_process.py --pid <pid> --executable <path>`. It verifies the file fingerprint, process image path, x86 architecture, loaded image and four eight-byte on-disk code prefixes before reading the candidate global. Any mismatch stops the candidate read. With the explicit `--observe-candidate` flag, it can additionally sample five unverified 32-bit words and checks that the global pointer did not change during the sample; With a second explicit `--observe-sun-candidate` flag, it follows the candidate at offset `0x768` only when the word at `0x7fc` is 3, reads one word at `0x5560`, then checks both pointers again. A third explicit `--observe-plant-candidate` flag reads and validates only the 28-byte candidate array header twice; it does not follow the element buffer. These values are still unverified and do not authorize game actions.
 
 ## First board and sun candidates
 
 In the same live run, the operator reported the main menu; a sample around that time had zero at candidate offset `0x768` and 1 at `0x7fc`. After the operator entered the first level, these values were nonzero and 3 respectively. A statically observed instruction at RVA `0xb069` writes 150 to offset `0x5560` of an object. Reading that word through the `0x768` pointer yielded 150, matching the operator's reported sun. After the operator planted a plant, the same word read 75, again matching the reported display. This is preliminary correlation, not proof of object type, scene semantics, correct behavior in other modes, or safe writes. Further independent samples, transition and restart checks are needed.
+
+## First array candidate
+
+Static code at RVA `0x8771` refers to offset `0xac` in a structure with repeated 28-byte-spaced fields. In the first-level sample, the header at candidate board + `0xac` looked like a DataArray with one used element, one live element, and capacity 2048, after the operator reported planting one plant. The association with plants, entry layout and behavior after transitions remain unproven. The HD reader's 1024-element capacity limit would reject this observed header, so it cannot be copied unchanged.
+
+The operator's local possible save folders were backed up before the game started. Comparing those folders with the backup after the interaction showed a modified file in one and a missing file in the other. This does not by itself establish causation or which build owns either folder. Do not restore, overwrite, or delete files automatically; establish ownership and discuss restoration before changing saves.
 
 ## Operator-provided control console
 
@@ -51,6 +57,7 @@ The operator provided an image of an in-game control console with options labell
 | Static imported-library inventory | Implemented; actual loaded paths not verified |
 | Loaded process identity and bounded candidate-pointer check | Implemented; checked in one live run, object type not established |
 | Scene, board and sun candidates | One live correlation; not verified for general use |
+| Plant array header candidate | One live correlation; element layout and mode coverage not verified |
 | Entity observation | Not implemented |
 | Menus, selection, board observation and actions | Not implemented |
 | Automated play and special modes | Not implemented |
