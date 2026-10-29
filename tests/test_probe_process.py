@@ -11,6 +11,10 @@ from test_inspect_pe import fixture
 
 
 class ProbeTest(unittest.TestCase):
+    def test_sun_candidate_requires_explicit_candidate_observation(self):
+        with self.assertRaisesRegex(ValueError, 'requires candidate observation'):
+            probe(1, 'unused', observe_sun_candidate=True)
+
     def test_disk_rva_translation_is_bounded(self):
         data = fixture()
         info = inspect_pe(data)

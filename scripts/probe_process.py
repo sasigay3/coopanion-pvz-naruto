@@ -14,7 +14,7 @@ EXPECTED_HASH = 'c536aaff6679fd391ee2ddb4711b4f983f4ce0ea9b32ecc66456cead5fdc59a
 EXPECTED_SIZE = 7_340_032
 # Candidate only. Do not dereference it or treat it as an established game object.
 GLOBAL_RVA = 0x2a9ec0
-CODE_RVAS = (0x4e8a0, 0x4e8c0)
+CODE_RVAS = (0x4e8a0, 0x4e8c0, 0xb069)
 
 
 def disk_bytes_at_rva(data, info, rva, size):
@@ -26,7 +26,9 @@ def disk_bytes_at_rva(data, info, rva, size):
     raise ValueError('RVA is not backed by file data')
 
 
-def probe(pid, expected_path, observe_candidate=False):
+def probe(pid, expected_path, observe_candidate=False, observe_sun_candidate=False):
+    if observe_sun_candidate and not observe_candidate:
+        raise ValueError('sun candidate requires candidate observation')
     if sys.platform != 'win32':
         raise OSError('Windows is required')
     if ctypes.sizeof(ctypes.c_void_p) != 8:
@@ -118,6 +120,16 @@ def probe(pid, expected_path, observe_candidate=False):
             if struct.unpack('<I', read(base + GLOBAL_RVA, 4))[0] != pointer:
                 raise ValueError('candidate changed during observation')
             result['candidate_words'] = words
+            if observe_sun_candidate:
+                board_candidate = words['0x768']
+                if words['0x7fc'] != 3 or board_candidate == 0 or board_candidate > 0xffffaa9b:
+                    raise ValueError('candidate board is absent or outside 32-bit bounds')
+                sun_candidate = struct.unpack('<I', read(board_candidate + 0x5560, 4))[0]
+                # Discard if either pointer changed during the bounded read.
+                if (struct.unpack('<I', read(base + GLOBAL_RVA, 4))[0] != pointer or
+                    struct.unpack('<I', read(pointer + 0x768, 4))[0] != board_candidate):
+                    raise ValueError('candidate pointers changed during observation')
+                result['sun_candidate'] = sun_candidate
         return result
     finally:
         kernel.CloseHandle(handle)
@@ -128,9 +140,10 @@ def main():
     parser.add_argument('--pid', required=True, type=int)
     parser.add_argument('--executable', required=True, type=Path)
     parser.add_argument('--observe-candidate', action='store_true', help='Read five unverified words from the candidate object')
+    parser.add_argument('--observe-sun-candidate', action='store_true', help='Read one unverified word from the board candidate (requires --observe-candidate)')
     args = parser.parse_args()
     try:
-        print(json.dumps(probe(args.pid, args.executable, args.observe_candidate), indent=2))
+        print(json.dumps(probe(args.pid, args.executable, args.observe_candidate, args.observe_sun_candidate), indent=2))
     except (OSError, ValueError) as exc:
         print(json.dumps({'error': str(exc)}), file=sys.stderr)
         raise SystemExit(1)
