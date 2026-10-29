@@ -1,0 +1,17 @@
+# Local artifacts and game content must not be committed.
+.claude/
+node_modules/
+dist/
+scratch/
+scratch-build/
+__pycache__/
+*.py[cod]
+*.log
+*.exe
+*.dll
+*.pak
+*.dat
+*.sav
+*.zip
+*.7z
+*.rar
