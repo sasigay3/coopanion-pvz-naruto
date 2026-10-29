@@ -1,0 +1,16 @@
+{
+  "name": "cortico-world-pvz-naruto",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Experimental independent Coopanion World for Plants vs. Zombies Naruto Edition",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/sasigay3/coopanion-pvz-naruto.git" },
+  "engines": { "node": ">=22.6" },
+  "os": ["win32"],
+  "packageManager": "pnpm@11.5.0",
+  "main": "./src/index.ts",
+  "cortico": { "kind": "world", "api": 6, "describe": "describe.json" },
+  "scripts": { "test": "node --experimental-strip-types --test tests/*.test.mjs", "typecheck": "tsc --noEmit" },
+  "devDependencies": { "@types/node": "^22.10.0", "cortico": "^0.2.0", "typescript": "^5.7.2" }
+}

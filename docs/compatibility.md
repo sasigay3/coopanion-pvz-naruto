@@ -31,4 +31,5 @@ The tool only reads the provided files; its output may contain hashes and offset
 | Menus, selection, board observation and actions | Not implemented |
 | Automated play and special modes | Not implemented |
 | Optional assists | Not implemented |
+| World identity and fail-closed scaffold | Implemented; not installed or tested alongside other extensions |
 | Installation alongside other extensions | Not implemented |
