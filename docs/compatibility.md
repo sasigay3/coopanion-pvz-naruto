@@ -17,6 +17,7 @@ Reproduce the static PE and exact-byte scan locally with Python 3:
 python scripts/inspect_pe.py <path-to-game-exe> --compare-profile <path-to-hd-profile.h>
 python scripts/inspect_imports.py <path-to-game-exe>
 python -m unittest discover -s tests
+scripts/test-native.cmd
 ```
 
 The tool only reads the provided files; its output may contain hashes and offsets. Review any captured output before publishing it. Later work must verify executable and resource identity, loaded image, object layouts and calling conventions before any injection, process write or game input. Test fixtures can validate parsing but cannot prove game compatibility.
@@ -43,6 +44,8 @@ In the same live run, the operator reported the main menu; a sample around that 
 
 Static code at RVA `0x8771` refers to offset `0xac` in a structure with repeated 28-byte-spaced fields. In the first-level sample, the header at candidate board + `0xac` looked like a DataArray with one used element, one live element, and capacity 2048, after the operator reported planting one plant. Static call sites use this candidate array in conjunction with a function at RVA `0x1de80` that indexes elements using a stride of `0x300` and accesses an ID-like word at offset `0x148`; another initialization path writes candidate row and column fields at offsets `0x1c` and `0x28`. These observations are consistent with a plant array, but the entry semantics and behavior after transitions remain unproven. The HD reader's 1024-element capacity limit would reject this observed header, and its plant stride is `0x14c`; neither can be copied unchanged. On the operator-confirmed first daytime level, a single slot passed the candidate ID check and returned raw words at offsets `0x1c`, `0x24`, and `0x28`; their meanings and the plant type are not yet confirmed.
 
+A separate candidate array at board offset `0x90` is passed to code at RVA `0x1dda0`, where element indexing uses `0x408` and an ID-like word at `0x404`. Its entity type has not been established in a live test. The HD iterator copies an entire stride into a `0x200` buffer and rejects larger strides, so this candidate also calls for a redesigned, bounded reader rather than changing constants alone. No elements from this candidate array have been read. The new standalone native reader samples explicitly requested fields and IDs instead of copying full strides, bounds lengths and addresses, and rejects ID or header changes before publishing results. It has only synthetic fixture coverage and is not yet connected to the game; the field reads are not atomic and visibility filtering remains the caller's responsibility.
+
 The operator's local possible save folders were backed up before the game started. Comparing those folders with the backup after the interaction showed a modified file in one and a missing file in the other. This does not by itself establish causation or which build owns either folder. Do not restore, overwrite, or delete files automatically; establish ownership and discuss restoration before changing saves.
 
 ## Operator-provided control console
@@ -58,6 +61,7 @@ The operator provided an image of an in-game control console with options labell
 | Loaded process identity and bounded candidate-pointer check | Implemented; checked in one live run, object type not established |
 | Scene, board and sun candidates | One live correlation; not verified for general use |
 | Plant array header candidate | One live correlation; element layout and mode coverage not verified |
+| Bounded native array reader | Implemented and fixture-tested; not connected to the game |
 | Entity observation | Not implemented |
 | Menus, selection, board observation and actions | Not implemented |
 | Automated play and special modes | Not implemented |

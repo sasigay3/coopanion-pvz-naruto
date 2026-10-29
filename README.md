@@ -8,4 +8,4 @@ This project will derive from [coopanion-pvz-garden](https://github.com/sasigay3
 
 A minimal World definition has an isolated `pvz-naruto` identity and intentionally refuses activation or creation until the game-specific bridge has been verified. It exposes no tools. See [compatibility research](docs/compatibility.md) for the evidence and outstanding work. Do not install this development scaffold as a working extension.
 
-Development checks: `corepack pnpm typecheck`, `corepack pnpm test`, and `python -m unittest discover -s tests`.
+Development checks: `corepack pnpm typecheck`, `corepack pnpm test`, and `python -m unittest discover -s tests`. On Windows with x86 Visual C++ Build Tools, run `scripts/test-native.cmd` for the native fixture.
