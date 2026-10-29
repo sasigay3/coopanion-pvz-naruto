@@ -34,7 +34,7 @@ On 2026-10-30, after backing up the two possible local save directories and aski
 
 A separate process-module query showed local modules named `gdi.dll`, `GDI42.dll`, `bass.dll`, and `UpdateCheck.dll` in that run. This is an observation, not a security assessment or a complete inventory of all files that may load later. The actual save location and any sharing with other builds remain unconfirmed.
 
-The bounded probe takes an explicit PID and executable path: `python scripts/probe_process.py --pid <pid> --executable <path>`. It verifies the file fingerprint, process image path, x86 architecture, loaded image and eight eight-byte on-disk code prefixes before reading the candidate global. Any mismatch stops the candidate read. With the explicit `--observe-candidate` flag, it can additionally check two candidate vtables and sample four unverified 32-bit words and checks that the global pointer did not change during the sample; With a second explicit `--observe-sun-candidate` flag, it follows the candidate at offset `0x768` only when the word at `0x7fc` is 3, reads one word at `0x5560`, then checks both pointers again. A third explicit `--observe-plant-candidate` flag reads and validates the 28-byte candidate array header twice without following its element buffer. An additional research-only `--observe-plant-slots` flag samples a maximum of 16 slots after checking candidate scene, mode and background values and the slot IDs. It must only be used after an operator confirms a visible ordinary daytime board: those candidate values alone cannot guarantee visibility. These values are still unverified and do not authorize game actions.
+The bounded probe takes an explicit PID and executable path: `python scripts/probe_process.py --pid <pid> --executable <path>`. It verifies the file fingerprint, process image path, x86 architecture, loaded image and ten eight-byte on-disk code prefixes before reading the candidate global. Any mismatch stops the candidate read. With the explicit `--observe-candidate` flag, it can additionally check two candidate vtables and sample four unverified 32-bit words and checks that the global pointer did not change during the sample; With a second explicit `--observe-sun-candidate` flag, it follows the candidate at offset `0x768` only when the word at `0x7fc` is 3, reads one word at `0x5560`, then checks both pointers again. A third explicit `--observe-plant-candidate` flag reads and validates the 28-byte candidate array header twice without following its element buffer. An additional research-only `--observe-plant-slots` flag samples a maximum of 16 slots after checking candidate scene, mode and background values and the slot IDs. It must only be used after an operator confirms a visible ordinary daytime board: those candidate values alone cannot guarantee visibility. A separate `--observe-card-candidate` flag reads only a candidate card-bank count after checking both pointers; it is not card observation. These values are still unverified and do not authorize game actions.
 
 ## First board and sun candidates
 
@@ -48,9 +48,13 @@ A separate candidate array at board offset `0x90` is passed to code at RVA `0x1d
 
 The operator's local possible save folders were backed up before the game started. Comparing those folders with the backup after the interaction showed a modified file in one and a missing file in the other. This does not by itself establish causation or which build owns either folder. Do not restore, overwrite, or delete files automatically; establish ownership and discuss restoration before changing saves.
 
+## First card-bank candidate
+
+Static code associates candidate board offset `0x144` with an allocated object; other code uses its word at offset `0x24` as a loop bound and advances through entries at `0x28` with a stride of `0x50`. One first-level sample produced a candidate count of 5. The field interpretation and correspondence with visible cards still require independent confirmation; no card identity, cost or cooldown has been established. The research probe reads only that count and caps it at 10, without following individual entries.
+
 ## Operator-provided control console
 
-The operator provided an image of an in-game control console with options labelled automatic collection, free planting, ignore cooldown, health display, and overlapping planting, plus a difficulty setting. Their real behavior, persisted state, implementation and interaction with the extension have not been verified. In particular, free planting is not the same feature as a sun reserve, a one-shot sun increase, or a bonus per verified sun collection. Future assist work should evaluate existing controls before duplicating functionality, and must independently test each requested feature and its off state.
+The operator provided an image of an in-game control console with options labelled automatic collection, free planting, ignore cooldown, health display, and overlapping planting, plus a difficulty setting. The locally supplied text resources describe the auto-collection option as covering sun and coins and describe a keyboard toggle; they also describe free planting and ignoring card cooldown. These descriptions corroborate the labels but do not verify real behavior, persisted state, implementation, or interaction with the extension. In particular, free planting is not the same feature as a sun reserve, a one-shot sun increase, or a bonus per verified sun collection. Future assist work should evaluate existing controls before duplicating functionality, and must independently test each requested feature and its off state.
 
 ## Compatibility matrix
 
@@ -62,6 +66,7 @@ The operator provided an image of an in-game control console with options labell
 | Scene, board and sun candidates | One live correlation; not verified for general use |
 | Plant array header candidate | One live correlation; element layout and mode coverage not verified |
 | Bounded native array reader | Implemented and fixture-tested; not connected to the game |
+| Card-bank count candidate | Static evidence and one live sample; not compared with visible cards |
 | Entity observation | Not implemented |
 | Menus, selection, board observation and actions | Not implemented |
 | Automated play and special modes | Not implemented |

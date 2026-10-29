@@ -1,5 +1,7 @@
 # Coopanion PvZ Naruto
 
+[中文说明](README.zh-CN.md)
+
 An independent Coopanion extension for autonomous Plants vs. Zombies Naruto Edition gameplay.
 
 **Status: research and adaptation only. This project is not yet usable with the game.**

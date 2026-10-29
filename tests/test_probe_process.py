@@ -20,6 +20,10 @@ class ProbeTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'requires candidate observation'):
             probe(1, 'unused', observe_sun_candidate=True)
 
+    def test_card_candidate_requires_explicit_candidate_observation(self):
+        with self.assertRaisesRegex(ValueError, 'requires candidate observation'):
+            probe(1, 'unused', observe_card_candidate=True)
+
     def test_candidate_vtables_are_pinned_to_loaded_base(self):
         validate_candidate_vtables(0x667ba0, 0x667d50, 0x400000)
         with self.assertRaisesRegex(ValueError, 'vtable mismatch'):

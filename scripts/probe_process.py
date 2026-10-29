@@ -14,7 +14,7 @@ EXPECTED_HASH = 'c536aaff6679fd391ee2ddb4711b4f983f4ce0ea9b32ecc66456cead5fdc59a
 EXPECTED_SIZE = 7_340_032
 # Candidate only. Do not treat it as an established game object.
 GLOBAL_RVA = 0x2a9ec0
-CODE_RVAS = (0x4e8a0, 0x4e8c0, 0x4eacb, 0x4ee11, 0xb069, 0x8771, 0x1de9b, 0x5db78)
+CODE_RVAS = (0x4e8a0, 0x4e8c0, 0x4eacb, 0x4ee11, 0xb069, 0x8771, 0x1de9b, 0x5db78, 0x7e7c, 0x89000)
 
 
 def disk_bytes_at_rva(data, info, rva, size):
@@ -76,10 +76,10 @@ def sample_plant_array(read, board_candidate, words, observe_slots=False):
     return result
 
 
-def probe(pid, expected_path, observe_candidate=False, observe_sun_candidate=False, observe_plant_candidate=False, observe_plant_slots=False):
+def probe(pid, expected_path, observe_candidate=False, observe_sun_candidate=False, observe_plant_candidate=False, observe_plant_slots=False, observe_card_candidate=False):
     if observe_plant_slots and not observe_plant_candidate:
         raise ValueError('plant slots require array header observation')
-    if (observe_sun_candidate or observe_plant_candidate) and not observe_candidate:
+    if (observe_sun_candidate or observe_plant_candidate or observe_card_candidate) and not observe_candidate:
         raise ValueError('board candidate requires candidate observation')
     if sys.platform != 'win32':
         raise OSError('Windows is required')
@@ -174,7 +174,7 @@ def probe(pid, expected_path, observe_candidate=False, observe_sun_candidate=Fal
             if struct.unpack('<I', read(base + GLOBAL_RVA, 4))[0] != pointer:
                 raise ValueError('candidate changed during observation')
             result['candidate_words'] = words
-            if observe_sun_candidate or observe_plant_candidate:
+            if observe_sun_candidate or observe_plant_candidate or observe_card_candidate:
                 board_candidate = words['0x768']
                 if words['0x7fc'] != 3 or board_candidate == 0 or board_candidate > 0xffffaa9b:
                     raise ValueError('candidate board is absent or outside 32-bit bounds')
@@ -182,6 +182,16 @@ def probe(pid, expected_path, observe_candidate=False, observe_sun_candidate=Fal
                     result['sun_candidate'] = struct.unpack('<I', read(board_candidate + 0x5560, 4))[0]
                 if observe_plant_candidate:
                     result.update(sample_plant_array(read, board_candidate, words, observe_plant_slots))
+                if observe_card_candidate:
+                    bank = struct.unpack('<I', read(board_candidate + 0x144, 4))[0]
+                    if not bank or bank > 0xffffffd7:
+                        raise ValueError('candidate card bank pointer is invalid')
+                    count = struct.unpack('<I', read(bank + 0x24, 4))[0]
+                    if count > 10:
+                        raise ValueError('candidate card count is outside the research bound')
+                    if struct.unpack('<I', read(board_candidate + 0x144, 4))[0] != bank:
+                        raise ValueError('candidate card bank changed during observation')
+                    result['card_count_candidate'] = count
                 # Discard if either pointer changed during the bounded read.
                 if (struct.unpack('<I', read(base + GLOBAL_RVA, 4))[0] != pointer or
                     struct.unpack('<I', read(pointer + 0x768, 4))[0] != board_candidate):
@@ -199,9 +209,10 @@ def main():
     parser.add_argument('--observe-sun-candidate', action='store_true', help='Read one unverified word from the board candidate (requires --observe-candidate)')
     parser.add_argument('--observe-plant-candidate', action='store_true', help='Read an unverified array header (requires --observe-candidate)')
     parser.add_argument('--observe-plant-slots', action='store_true', help='Only on an operator-confirmed visible daytime board: read bounded unverified slots')
+    parser.add_argument('--observe-card-candidate', action='store_true', help='Read an unverified card-count word (requires --observe-candidate)')
     args = parser.parse_args()
     try:
-        print(json.dumps(probe(args.pid, args.executable, args.observe_candidate, args.observe_sun_candidate, args.observe_plant_candidate, args.observe_plant_slots), indent=2))
+        print(json.dumps(probe(args.pid, args.executable, args.observe_candidate, args.observe_sun_candidate, args.observe_plant_candidate, args.observe_plant_slots, args.observe_card_candidate), indent=2))
     except (OSError, ValueError) as exc:
         print(json.dumps({'error': str(exc)}), file=sys.stderr)
         raise SystemExit(1)
