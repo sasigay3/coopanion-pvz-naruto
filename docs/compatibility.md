@@ -25,7 +25,15 @@ The tool only reads the provided files; its output may contain hashes and offset
 
 For the examined SHA-256 only, a read-only x86 disassembly found code loading a pointer from preferred-base VA `0x006a9ec0` at RVAs `0x4e8a0` and `0x4e8c0`. The latter checks that pointer, then reads a pointer at offset `0x82c` and checks it before dereferencing it. Another instruction at RVA `0x57e0b` loads the same global and accesses an object at offset `0x768`. The global is located in the virtual range of the first `.data` section; it is not evidence that the pointer is initialized or valid at runtime.
 
-This is an **unverified candidate**, not a game profile. The instructions have not established the object types, field meanings, actual loaded base, or whether the code corresponds to the live game state. No process was started, attached to, modified, or injected to make these observations. In particular, neither `0x768` nor `0x82c` is currently authorized for process reads. Further work requires independent code-path analysis and bounded read-only verification against visible in-game states.
+This is an **unverified candidate**, not a game profile. The instructions have not established the object types, field meanings, actual loaded base, or whether the code corresponds to the live game state. No process was started, attached to, modified, or injected to make these observations. The fields at `0x768` and `0x82c` remain unverified and are not read by the probe. Further work requires independent code-path analysis and bounded read-only verification against visible in-game states.
+
+## First live read-only check
+
+On 2026-10-30, after backing up the two possible local save directories and asking the operator to start the game, a read-only probe opened the identified x86 process with query and memory-read rights only. The image path and file SHA-256 matched the examined executable; its loaded base was the preferred base, both eight-byte candidate code checks matched the file, and the candidate global contained a nonzero pointer. The probe did not dereference that pointer, infer its type, operate the game, or write to the process. One observed run does not establish behavior in other scenes or after restart.
+
+A separate process-module query showed local modules named `gdi.dll`, `GDI42.dll`, `bass.dll`, and `UpdateCheck.dll` in that run. This is an observation, not a security assessment or a complete inventory of all files that may load later. The actual save location and any sharing with other builds remain unconfirmed.
+
+The bounded probe takes an explicit PID and executable path: `python scripts/probe_process.py --pid <pid> --executable <path>`. It verifies the file fingerprint, process image path, x86 architecture, loaded image and two on-disk code sequences before reading only the candidate global. Any mismatch stops the candidate read.
 
 ## Compatibility matrix
 
@@ -33,7 +41,8 @@ This is an **unverified candidate**, not a game profile. The instructions have n
 | --- | --- |
 | Static PE identity and exact-signature comparison | Implemented; exercised on the supplied file |
 | Static imported-library inventory | Implemented; actual loaded paths not verified |
-| Loaded process identity and safe runtime observation | Not implemented |
+| Loaded process identity and bounded candidate-pointer check | Implemented; checked in one live run, object type not established |
+| Scene, board and entity observation | Not implemented |
 | Menus, selection, board observation and actions | Not implemented |
 | Automated play and special modes | Not implemented |
 | Optional assists | Not implemented |
