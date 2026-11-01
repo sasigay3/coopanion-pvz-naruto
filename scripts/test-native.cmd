@@ -11,4 +11,8 @@ if not exist scratch\native-check mkdir scratch\native-check
 cl /nologo /EHsc /std:c++17 /W4 /WX /Fe:scratch\native-check\fixture.exe /Fo:scratch\native-check\fixture.obj tests\native_data_array.cpp
 if errorlevel 1 exit /b 1
 scratch\native-check\fixture.exe
+if errorlevel 1 exit /b 1
+cl /nologo /EHsc /std:c++17 /W4 /WX /Fe:scratch\native-check\snapshot.exe /Fo:scratch\native-check\snapshot.obj tests\native_candidate_snapshot.cpp
+if errorlevel 1 exit /b 1
+scratch\native-check\snapshot.exe
 exit /b %errorlevel%

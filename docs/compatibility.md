@@ -1,6 +1,6 @@
 # Initial compatibility investigation
 
-Status: **static investigation only; the extension does not run the Naruto build yet.** No game executable, asset, save, process memory or local path is included in the repository.
+Status: **research only; the extension does not run the Naruto build yet.** No game executable, asset, save, process memory or local path is included in the repository.
 
 The target executable supplied by the operator was read as a file on 2026-10-30. Its SHA-256 is `c536aaff6679fd391ee2ddb4711b4f983f4ce0ea9b32ecc66456cead5fdc59a2` and its size is 7,340,032 bytes. Its Windows file version is 1.0.0.1051. These facts identify the examined file; they do **not** establish compatibility or guarantee the integrity of accompanying files.
 
@@ -26,7 +26,7 @@ The tool only reads the provided files; its output may contain hashes and offset
 
 For the examined SHA-256 only, a read-only x86 disassembly found code loading a pointer from preferred-base VA `0x006a9ec0` at RVAs `0x4e8a0` and `0x4e8c0`. The latter checks that pointer, then reads a pointer at offset `0x82c` and checks it before dereferencing it. Another instruction at RVA `0x57e0b` loads the same global and accesses an object at offset `0x768`. The global is located in the virtual range of the first `.data` section; it is not evidence that the pointer is initialized or valid at runtime.
 
-This is an **unverified candidate**, not a game profile. Static constructor/destructor code at RVAs `0x4eacb` and `0x4ee11` writes two vtable constants that also match the sampled object in this run. That strengthens the candidate identity, but the field meanings and behavior across modes are not yet established. No process was started, attached to, modified, or injected to make these observations. The fields at `0x768` and `0x82c` remain unverified. The optional probe can sample these words without dereferencing their values; it does not interpret their meaning. Further work requires independent code-path analysis and bounded read-only verification against visible in-game states.
+This is an **unverified candidate**, not a game profile. Static constructor/destructor code at RVAs `0x4eacb` and `0x4ee11` writes two vtable constants that also match the sampled object in this run. That strengthens the candidate identity, but the field meanings and behavior across modes are not yet established. Those static observations did not start or attach to a process, modify it, or inject code. The fields at `0x768` and `0x82c` remain unverified. The optional probe can sample these words without dereferencing their values; it does not interpret their meaning. Further work requires independent code-path analysis and bounded read-only verification against visible in-game states.
 
 ## First live read-only check
 
@@ -35,6 +35,10 @@ On 2026-10-30, after backing up the two possible local save directories and aski
 A separate process-module query showed local modules named `gdi.dll`, `GDI42.dll`, `bass.dll`, and `UpdateCheck.dll` in that run. This is an observation, not a security assessment or a complete inventory of all files that may load later. The actual save location and any sharing with other builds remain unconfirmed.
 
 The bounded probe takes an explicit PID and executable path: `python scripts/probe_process.py --pid <pid> --executable <path>`. It verifies the file fingerprint, process image path, x86 architecture, loaded image and ten eight-byte on-disk code prefixes before reading the candidate global. Any mismatch stops the candidate read. With the explicit `--observe-candidate` flag, it can additionally check two candidate vtables and sample four unverified 32-bit words and checks that the global pointer did not change during the sample; With a second explicit `--observe-sun-candidate` flag, it follows the candidate at offset `0x768` only when the word at `0x7fc` is 3, reads one word at `0x5560`, then checks both pointers again. A third explicit `--observe-plant-candidate` flag reads and validates the 28-byte candidate array header twice without following its element buffer. An additional research-only `--observe-plant-slots` flag samples a maximum of 16 slots after checking candidate scene, mode and background values and the slot IDs. It must only be used after an operator confirms a visible ordinary daytime board: those candidate values alone cannot guarantee visibility. A separate `--observe-card-candidate` flag reads only a candidate card-bank count after checking both pointers; it is not card observation. These values are still unverified and do not authorize game actions.
+
+## Standalone native candidate snapshot
+
+A separate C++ research component checks the ten candidate code prefixes, the preferred image base and both candidate vtables before sampling the candidate scene, mode, sun and card count. It repeats pointer, scene, mode and requested-value checks and returns no partial snapshot if they change. The component does not open a process or authenticate its executable and must not be called on a live process until a separate file-and-process identity gate is in place. Checks around sequential reads reduce races; they cannot make the sample atomic or prove any field's game meaning. The World remains disabled. The ten stored prefixes were independently checked against the examined local executable; its implementation has synthetic x86 fixture coverage only and has not been tested against the game.
 
 ## First board and sun candidates
 
@@ -56,6 +60,10 @@ Static code associates candidate board offset `0x144` with an allocated object; 
 
 The operator provided an image of an in-game control console with options labelled automatic collection, free planting, ignore cooldown, health display, and overlapping planting, plus a difficulty setting. The locally supplied text resources describe the auto-collection option as covering sun and coins and describe a keyboard toggle; they also describe free planting and ignoring card cooldown. These descriptions corroborate the labels but do not verify real behavior, persisted state, implementation, or interaction with the extension. In particular, free planting is not the same feature as a sun reserve, a one-shot sun increase, or a bonus per verified sun collection. Future assist work should evaluate existing controls before duplicating functionality, and must independently test each requested feature and its off state.
 
+## HD baseline reuse checks
+
+In an isolated archive of HD commit `f506025`, five selected test files for protocol, conditions, triggers, executor freshness, and delivery freshness produced 264 passes and one timeout. Instrumenting only the temporary archive showed that the timed-out delivery test received and rendered the intended batch, then hung during cleanup. Starting `world.stop()` while fake timers were active and advancing those timers allowed that single instrumented test to pass. This is evidence about that fixture's cleanup ordering, not a proven fix for production shutdown, other failing tests, or Naruto compatibility. A second isolated selection covering executor, runtime, bridge, lifecycle and automatic collection produced 179 passes and three failures: one expected status object lacks assist fields, one expected receipt text differs from the implementation, and one expects the sun pickup before the coin while the observed call order was reversed. Whether the ordering difference represents a behavioral defect or a stale expectation remains unverified. The original HD checkout was not modified. Review and adapt these components only after target snapshots and action contracts are verified.
+
 ## Compatibility matrix
 
 | Capability | Status |
@@ -63,7 +71,7 @@ The operator provided an image of an in-game control console with options labell
 | Static PE identity and exact-signature comparison | Implemented; exercised on the supplied file |
 | Static imported-library inventory | Implemented; actual loaded paths not verified |
 | Loaded process identity and bounded candidate-pointer check | Implemented; checked in one live run, object type not established |
-| Scene, board and sun candidates | One live correlation; not verified for general use |
+| Scene, board and sun candidates | Python research probe has one live correlation; standalone native snapshot has synthetic tests only |
 | Plant array header candidate | One live correlation; element layout and mode coverage not verified |
 | Bounded native array reader | Implemented and fixture-tested; not connected to the game |
 | Card-bank count candidate | Static evidence and one live sample; not compared with visible cards |
