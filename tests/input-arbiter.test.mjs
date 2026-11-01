@@ -52,3 +52,15 @@ test('closing rejects waiting and future requests while preserving the active le
   active.release();
   arbiter.close();
 });
+
+test('ID tracking is bounded and closes rather than allowing an old ID to be reused', async () => {
+  const arbiter = new InputArbiter();
+  const lease = await arbiter.acquire();
+  assert.equal(lease.claimAction(''), 'unavailable');
+  for (let i = 0; i < 10_000; i++) assert.equal(lease.claimAction(`id-${i}`), 'claimed');
+  assert.equal(lease.claimAction('id-0'), 'duplicate');
+  assert.equal(lease.claimAction('one-too-many'), 'unavailable');
+  await assert.rejects(arbiter.acquire(), /closed/);
+  lease.release();
+  assert.equal(lease.claimAction('other'), 'unavailable');
+});

@@ -41,6 +41,8 @@ export async function runGuardedAction<TState, TCommand>(options: {
     catch { return { status: 'blocked', reason: 'fresh observation unavailable' }; }
     const decision = checkBeforeDispatch(ticket, before, now(), signal?.aborted === true);
     if (!decision.allowed) return { status: 'blocked', reason: decision.reason };
+    const claimed = lease.claimAction(ticket.id);
+    if (claimed !== 'claimed') return { status: 'blocked', reason: claimed === 'duplicate' ? 'duplicate action' : 'input unavailable' };
     releaseUncertain = true;
     let receipt: Awaited<ReturnType<GuardedDriver<TState, TCommand>['dispatch']>>;
     try { receipt = await driver.dispatch(command, ticket, signal); }

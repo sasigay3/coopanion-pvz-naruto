@@ -100,3 +100,32 @@ test('an uncertain release blocks a task already waiting for input', async () =>
   assert.deepEqual(await second, { status: 'blocked', reason: 'input unavailable' });
   assert.equal(actions, 1);
 });
+
+test('an action ID cannot be dispatched twice through the same arbiter', async () => {
+  const arbiter = new InputArbiter();
+  let calls = 0;
+  const driver = {
+    observe: async () => board,
+    dispatch: async () => { calls++; return { releaseConfirmed: true, releaseFor: 'a1',
+      terminal: { id: 'a1', outcome: 'rejected', revision: 1 } }; },
+  };
+  const [first, second] = await Promise.all([
+    runGuardedAction(args(arbiter, driver)), runGuardedAction(args(arbiter, driver)),
+  ]);
+  assert.equal(first.status, 'rejected');
+  assert.deepEqual(second, { status: 'blocked', reason: 'duplicate action' });
+  assert.equal(calls, 1);
+  assert.deepEqual(await runGuardedAction(args(arbiter, driver)), { status: 'blocked', reason: 'duplicate action' });
+});
+
+test('a request blocked before dispatch does not consume its action ID', async () => {
+  const arbiter = new InputArbiter();
+  let scene = { ...board, run: 'other' }, calls = 0;
+  const driver = { observe: async () => scene, dispatch: async () => { calls++; return {
+    releaseConfirmed: true, releaseFor: 'a1', terminal: { id: 'a1', outcome: 'rejected', revision: 1 },
+  }; } };
+  assert.equal((await runGuardedAction(args(arbiter, driver))).status, 'blocked');
+  scene = board;
+  assert.equal((await runGuardedAction(args(arbiter, driver))).status, 'rejected');
+  assert.equal(calls, 1);
+});
