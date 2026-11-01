@@ -46,6 +46,12 @@ A separate x86 Windows component now opens only an explicitly selected existing 
 
 The native file gate accepted the examined local executable and rejected a synthetic same-size PE with the wrong digest and malformed headers. A standalone research CLI combines this gate with the candidate reader and emits bounded candidate-only JSON. Its argument validation and rejection of an unrelated process have been tested; it is not a World tool and does not launch the game. A separate TypeScript parser rejects malformed, excessive, or unexpected responses instead of treating them as game state. An internal client invokes the helper with an argument array and no shell, limits output and execution time, and checks a caller-supplied helper digest before execution. The caller must obtain the helper and digest from a trusted build; the digest does not authenticate the source or eliminate a file-replacement race. The client is not connected to the World. A process test paired that real file with the test runner's own unrelated PID and confirmed rejection. Separately, an x86 fixture exercised the same OS-level process/file matching and bounded read primitives against its own process, and verified that its query-and-read handle could not write even to that fixture. The fixture did not use or modify the game process. Synthetic tests exercise bad signatures, object identity, changed pointers, scene transitions and failures without a game. **The native gate has not yet been tested against the actual running target**, and it is not connected to the World. The earlier positive live sample used only the Python research probe.
 
+## Isolated research-helper build
+
+The internal TypeScript builder compiles the x86 research CLI into a `pvz-naruto-research` subdirectory of a caller-selected build root. A source-content hash names the cache; the local manifest records the helper's size and SHA-256. The builder checks the source before and after compilation, refuses incomplete or modified caches instead of overwriting them, and leaves failed staging folders for inspection. It does not install the extension or touch other extensions' build directories. These checks are integrity checks, not a signature or proof of a trusted compiler, and cannot eliminate local file-replacement races.
+
+A Windows fixture built the helper in a separate scratch directory, reused the intact cache, rejected deliberately altered fixture binary and manifest, and exercised the client against an unrelated process. No target game was started by these tests. The build and client are not wired to the disabled World.
+
 ## First board and sun candidates
 
 In the same live run, the operator reported the main menu; a sample around that time had zero at candidate offset `0x768` and 1 at `0x7fc`. After the operator entered the first level, these values were nonzero and 3 respectively. A statically observed instruction at RVA `0xb069` writes 150 to offset `0x5560` of an object. Reading that word through the `0x768` pointer yielded 150, matching the operator's reported sun. After the operator planted a plant, the same word read 75, again matching the reported display. This is preliminary correlation, not proof of object type, scene semantics, correct behavior in other modes, or safe writes. Further independent samples, transition and restart checks are needed.
@@ -90,5 +96,6 @@ In an isolated archive of HD commit `f506025`, five selected test files for prot
 | Menus, selection, board observation and actions | Not implemented |
 | Automated play and special modes | Not implemented |
 | Optional assists | Not implemented |
+| Isolated research-helper build | Fixture-tested; not installed or used by the World |
 | World identity and fail-closed scaffold | Implemented; not installed or tested alongside other extensions |
 | Installation alongside other extensions | Not implemented |
