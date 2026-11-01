@@ -23,13 +23,15 @@ inline constexpr std::array<CodePrefix, 10> kResearchCodePrefixes{{
     {0x89000, {0x33,0xd2,0xd9,0xee,0x89,0x51,0x08,0x89}},
 }};
 
+struct CandidateArrayCounts { uint32_t used, capacity, count; };
 struct CandidateSnapshot {
     uint32_t scene_candidate = 0;
     uint32_t mode_candidate = 0;
     std::optional<uint32_t> sun_candidate;
     std::optional<uint32_t> card_count_candidate;
+    std::optional<CandidateArrayCounts> plant_array_candidate;
 };
-struct CandidateOptions { bool sun = false; bool card_count = false; };
+struct CandidateOptions { bool sun = false; bool card_count = false; bool plant_array = false; };
 enum class CandidateStatus {
     ok, invalid_base, read_failed, code_mismatch, not_ready,
     object_mismatch, invalid_value, changed
@@ -67,7 +69,8 @@ CandidateStatus ReadCandidateSnapshot(Read read, uint32_t image_base,
     candidate.scene_candidate = scene;
     candidate.mode_candidate = mode;
     uint32_t bank = 0;
-    if (options.sun || options.card_count) {
+    std::array<uint32_t, 7> array_header{};
+    if (options.sun || options.card_count || options.plant_array) {
         if (scene != 3 || !board || uint64_t(board) + 0x5564 > uint64_t(UINT32_MAX) + 1)
             return CandidateStatus::not_ready;
         if (options.sun) {
@@ -82,6 +85,13 @@ CandidateStatus ReadCandidateSnapshot(Read read, uint32_t image_base,
             if (!word(uint64_t(bank) + 0x24, count)) return CandidateStatus::read_failed;
             if (count > 10) return CandidateStatus::invalid_value;
             candidate.card_count_candidate = count;
+        }
+        if (options.plant_array) {
+            if (!read(board + 0xac, array_header.data(), sizeof(array_header))) return CandidateStatus::read_failed;
+            const auto block = array_header[0], used = array_header[1], capacity = array_header[2], count = array_header[4];
+            if (capacity > 4096 || used > capacity || count > used || (count && !block))
+                return CandidateStatus::invalid_value;
+            candidate.plant_array_candidate = CandidateArrayCounts{used, capacity, count};
         }
     }
     auto check_context = [&]() {
@@ -110,6 +120,11 @@ CandidateStatus ReadCandidateSnapshot(Read read, uint32_t image_base,
         if (bank_after != bank) return CandidateStatus::changed;
         if (!word(uint64_t(bank) + 0x24, count_after)) return CandidateStatus::read_failed;
         if (count_after != *candidate.card_count_candidate) return CandidateStatus::changed;
+    }
+    if (options.plant_array) {
+        std::array<uint32_t, 7> current{};
+        if (!read(board + 0xac, current.data(), sizeof(current))) return CandidateStatus::read_failed;
+        if (current != array_header) return CandidateStatus::changed;
     }
     const auto final_check = check_context();
     if (final_check != CandidateStatus::ok) return final_check;

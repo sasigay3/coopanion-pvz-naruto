@@ -4,9 +4,11 @@
 using namespace naruto;
 int main() {
     ResearchCliArgs args{};
-    const wchar_t* valid[] = {L"probe", L"--pid", L"42", L"--executable", L"example.exe", L"--sun", L"--cards"};
-    assert(ParseResearchCli(7, valid, args));
-    assert(args.pid == 42 && args.executable == L"example.exe" && args.sun && args.cards);
+    const wchar_t* valid[] = {L"probe", L"--pid", L"42", L"--executable", L"example.exe", L"--sun", L"--cards", L"--plant-array"};
+    assert(ParseResearchCli(8, valid, args));
+    assert(args.pid == 42 && args.executable == L"example.exe" && args.sun && args.cards && args.plant_array);
+    const wchar_t* duplicate_array[] = {L"probe", L"--pid", L"1", L"--executable", L"x", L"--plant-array", L"--plant-array"};
+    assert(!ParseResearchCli(7, duplicate_array, args));
     const wchar_t* zero[] = {L"probe", L"--pid", L"0", L"--executable", L"x"};
     assert(!ParseResearchCli(5, zero, args) && args.pid == 0);
     const wchar_t* negative[] = {L"probe", L"--pid", L"-1", L"--executable", L"x"};

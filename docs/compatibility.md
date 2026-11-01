@@ -38,7 +38,7 @@ The bounded probe takes an explicit PID and executable path: `python scripts/pro
 
 ## Standalone native candidate snapshot
 
-A separate C++ research component checks the ten candidate code prefixes, the preferred image base and both candidate vtables before sampling the candidate scene, mode, sun and card count. It repeats pointer, scene, mode and requested-value checks and returns no partial snapshot if they change. The component does not open a process or authenticate its executable and must not be called on a live process until a separate file-and-process identity gate is in place. Checks around sequential reads reduce races; they cannot make the sample atomic or prove any field's game meaning. The World remains disabled. The ten stored prefixes were independently checked against the examined local executable; its implementation has synthetic x86 fixture coverage only and has not been tested against the game.
+A separate C++ research component checks the ten candidate code prefixes, the preferred image base and both candidate vtables before sampling the candidate scene and mode and, when requested, sun, card count or plant-array header counts. The array option reads and compares the full header twice, validates its bounds, and exposes only the used, capacity and count words; it never follows the buffer. It repeats pointer, scene, mode and requested-value checks and returns no partial snapshot if they change. The component does not open a process or authenticate its executable and must not be called on a live process until a separate file-and-process identity gate is in place. Checks around sequential reads reduce races; they cannot make the sample atomic or prove any field's game meaning. The World remains disabled. The ten stored prefixes were independently checked against the examined local executable; its implementation has synthetic x86 fixture coverage only and has not been tested against the game.
 
 ## Native read-only identity gate
 
@@ -90,7 +90,7 @@ In an isolated archive of HD commit `f506025`, five selected test files for prot
 | Static imported-library inventory | Implemented; some local modules observed in one run, later loads unverified |
 | Loaded process identity and bounded candidate-pointer check | Python probe checked in one live run; native process gate and TypeScript client have no positive live test |
 | Scene, board and sun candidates | Python research probe has one live correlation; standalone native snapshot has synthetic tests only |
-| Plant array header candidate | One live correlation; element layout and mode coverage not verified |
+| Plant array header candidate | One live correlation via Python; native header option fixture-tested only; element layout and mode coverage not verified |
 | Bounded native array reader | Implemented and fixture-tested; not connected to the game |
 | Card-bank count candidate | Static evidence and one live sample; not compared with visible cards |
 | Entity observation | Not implemented |

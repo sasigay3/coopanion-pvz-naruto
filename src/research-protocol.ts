@@ -1,6 +1,7 @@
 /** Wire format for the research-only native reader. Not a gameplay snapshot. */
 export type ResearchResult =
-  | { ok: true; sceneCandidate: number; modeCandidate: number; sunCandidate?: number; cardCountCandidate?: number }
+  | { ok: true; sceneCandidate: number; modeCandidate: number; sunCandidate?: number; cardCountCandidate?: number;
+      plantArrayCandidate?: { used: number; capacity: number; count: number } }
   | { ok: false; reason: ResearchFailure };
 
 const FAILURE_REASONS = [
@@ -11,7 +12,7 @@ const FAILURE_REASONS = [
 ] as const;
 export type ResearchFailure = typeof FAILURE_REASONS[number];
 const failureSet = new Set<string>(FAILURE_REASONS);
-const successKeys = new Set(['status', 'research_only', 'scene_candidate', 'mode_candidate', 'sun_candidate', 'card_count_candidate']);
+const successKeys = new Set(['status', 'research_only', 'scene_candidate', 'mode_candidate', 'sun_candidate', 'card_count_candidate', 'plant_array_candidate']);
 
 function word(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 0xffffffff;
@@ -36,8 +37,18 @@ export function parseResearchOutput(text: string): ResearchResult {
       !word(data.scene_candidate) || !word(data.mode_candidate)) throw new Error('invalid research snapshot');
   const sun = data.sun_candidate;
   const cards = data.card_count_candidate;
+  const array = data.plant_array_candidate;
+  let plantArray: { used: number; capacity: number; count: number } | undefined;
+  if (array !== undefined) {
+    if (!array || typeof array !== 'object' || Array.isArray(array)) throw new Error('invalid array candidate');
+    const candidate = array as Record<string, unknown>;
+    if (Object.keys(candidate).length !== 3 || !word(candidate.used) || !word(candidate.capacity) ||
+        !word(candidate.count) || candidate.capacity > 4096 || candidate.used > candidate.capacity || candidate.count > candidate.used)
+      throw new Error('invalid array candidate');
+    plantArray = { used: candidate.used, capacity: candidate.capacity, count: candidate.count };
+  }
   if ((sun !== undefined && !word(sun)) || (cards !== undefined && (!word(cards) || cards > 10)) ||
-      ((sun !== undefined || cards !== undefined) && data.scene_candidate !== 3)) {
+      ((sun !== undefined || cards !== undefined || array !== undefined) && data.scene_candidate !== 3)) {
     throw new Error('invalid research candidate value');
   }
   return {
@@ -46,5 +57,6 @@ export function parseResearchOutput(text: string): ResearchResult {
     modeCandidate: data.mode_candidate,
     ...(sun !== undefined ? { sunCandidate: sun as number } : {}),
     ...(cards !== undefined ? { cardCountCandidate: cards as number } : {}),
+    ...(plantArray ? { plantArrayCandidate: plantArray } : {}),
   };
 }

@@ -24,6 +24,8 @@ int main() {
     put(board + 0x5560, 75);
     put(board + 0x144, bank);
     put(bank + 0x24, 5);
+    const std::array<uint32_t, 7> header{0x40000000, 1, 2048, 0, 1, 2, 0};
+    bytes(board + 0xac, header.data(), sizeof(header));
     auto read = [&](uint32_t address, void* out, size_t size) {
         const auto found = memory.find(address);
         if (found == memory.end() || found->second.size() != size) return false;
@@ -34,6 +36,27 @@ int main() {
     assert(ReadCandidateSnapshot(read, image, {true, true}, snapshot) == CandidateStatus::ok);
     assert(snapshot.scene_candidate == 3 && snapshot.mode_candidate == 0);
     assert(snapshot.sun_candidate == 75U && snapshot.card_count_candidate == 5U);
+    assert(ReadCandidateSnapshot(read, image, {true, true, true}, snapshot) == CandidateStatus::ok);
+    assert(snapshot.plant_array_candidate && snapshot.plant_array_candidate->used == 1 &&
+           snapshot.plant_array_candidate->capacity == 2048 && snapshot.plant_array_candidate->count == 1);
+    auto invalid_header = header;
+    invalid_header[4] = 2;
+    bytes(board + 0xac, invalid_header.data(), sizeof(invalid_header));
+    assert(ReadCandidateSnapshot(read, image, {false, false, true}, snapshot) == CandidateStatus::invalid_value);
+    assert(!snapshot.plant_array_candidate);
+    bytes(board + 0xac, header.data(), sizeof(header));
+    int header_reads = 0;
+    auto changed_header = [&](uint32_t address, void* out, size_t size) {
+        if (address == board + 0xac && ++header_reads == 2) {
+            auto changed = header;
+            changed[5]++;
+            std::memcpy(out, changed.data(), size);
+            return true;
+        }
+        return read(address, out, size);
+    };
+    assert(ReadCandidateSnapshot(changed_header, image, {false, false, true}, snapshot) == CandidateStatus::changed);
+    assert(!snapshot.plant_array_candidate);
     assert(ReadCandidateSnapshot(read, image + 1, {true, true}, snapshot) == CandidateStatus::invalid_base);
     assert(!snapshot.sun_candidate && !snapshot.card_count_candidate);
 
@@ -54,6 +77,7 @@ int main() {
     assert(ReadCandidateSnapshot(read, image, {false, false}, snapshot) == CandidateStatus::ok);
     assert(snapshot.scene_candidate == 1 && !snapshot.sun_candidate);
     assert(ReadCandidateSnapshot(read, image, {true, true}, snapshot) == CandidateStatus::not_ready);
+    assert(ReadCandidateSnapshot(read, image, {false, false, true}, snapshot) == CandidateStatus::not_ready);
     put(root + 0x7fc, 3);
     put(root + 0x768, board);
     put(bank + 0x24, 11);
@@ -110,4 +134,12 @@ int main() {
     };
     assert(ReadCandidateSnapshot(fail_sun, image, {true, false}, snapshot) == CandidateStatus::read_failed);
     assert(!snapshot.sun_candidate);
+    auto fail_header = [&](uint32_t address, void* out, size_t size) {
+        return address != board + 0xac && read(address, out, size);
+    };
+    assert(ReadCandidateSnapshot(fail_header, image, {false, false, true}, snapshot) == CandidateStatus::read_failed);
+    assert(!snapshot.plant_array_candidate);
+    // Without the explicit option, the candidate array is not read.
+    assert(ReadCandidateSnapshot(fail_header, image, {}, snapshot) == CandidateStatus::ok);
+    assert(!snapshot.plant_array_candidate);
 }

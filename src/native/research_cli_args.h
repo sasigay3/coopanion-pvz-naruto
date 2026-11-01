@@ -9,6 +9,7 @@ struct ResearchCliArgs {
     std::wstring executable;
     bool sun = false;
     bool cards = false;
+    bool plant_array = false;
 };
 
 // Reject ambiguity: a caller must explicitly name one PID and one executable.
@@ -22,6 +23,7 @@ inline bool ParseResearchCli(int argc, const wchar_t* const* argv, ResearchCliAr
         const std::wstring_view name(argv[i]);
         if (name == L"--sun" && !parsed.sun) { parsed.sun = true; continue; }
         if (name == L"--cards" && !parsed.cards) { parsed.cards = true; continue; }
+        if (name == L"--plant-array" && !parsed.plant_array) { parsed.plant_array = true; continue; }
         if (name == L"--pid" && !saw_pid && i + 1 < argc && argv[i + 1]) {
             const std::wstring_view value(argv[++i]);
             if (value.empty() || value.size() > 10) return false;

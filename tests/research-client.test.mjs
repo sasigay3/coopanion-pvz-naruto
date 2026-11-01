@@ -11,7 +11,7 @@ test('rejects malformed requests before spawning a process', { skip: !windows },
   for (const request of [
     { ...base, pid: 0 }, { ...base, pid: -1 }, { ...base, pid: 0x100000000 },
     { ...base, cliSha256: 'bad' }, { ...base, cliPath: 'relative.exe' },
-    { ...base, sun: 'true' }, { ...base, executablePath: null },
+    { ...base, sun: 'true' }, { ...base, plantArray: 'true' }, { ...base, executablePath: null },
   ]) await assert.rejects(runResearchProbe(request), /invalid research probe request/);
 });
 
@@ -28,7 +28,7 @@ test('native helper rejects an unrelated process', { skip: !windows || !process.
   const cliPath = resolve(process.env.NARUTO_RESEARCH_CLI);
   const cliSha256 = createHash('sha256').update(await readFile(cliPath)).digest('hex');
   const result = await runResearchProbe({
-    cliPath, cliSha256, executablePath: resolve(process.env.NARUTO_RESEARCH_TARGET), pid: process.pid, sun: true, cards: true,
+    cliPath, cliSha256, executablePath: resolve(process.env.NARUTO_RESEARCH_TARGET), pid: process.pid, sun: true, cards: true, plantArray: true,
   });
   assert.equal(result.ok, false);
   assert.ok(['architecture_mismatch', 'image_mismatch'].includes(result.reason));

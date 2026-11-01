@@ -46,7 +46,7 @@ int wmain(int argc, wchar_t** argv) {
         return 1;
     }
     CandidateSnapshot snapshot{};
-    const auto result = target.Snapshot({args.sun, args.cards}, snapshot);
+    const auto result = target.Snapshot({args.sun, args.cards, args.plant_array}, snapshot);
     if (result != CandidateStatus::ok) {
         std::cout << "{\"status\":\"" << SnapshotReason(result) << "\"}\n";
         return 1;
@@ -55,6 +55,11 @@ int wmain(int argc, wchar_t** argv) {
               << ",\"mode_candidate\":" << snapshot.mode_candidate;
     if (snapshot.sun_candidate) std::cout << ",\"sun_candidate\":" << *snapshot.sun_candidate;
     if (snapshot.card_count_candidate) std::cout << ",\"card_count_candidate\":" << *snapshot.card_count_candidate;
+    if (snapshot.plant_array_candidate) {
+        const auto& counts = *snapshot.plant_array_candidate;
+        std::cout << ",\"plant_array_candidate\":{\"used\":" << counts.used
+                  << ",\"capacity\":" << counts.capacity << ",\"count\":" << counts.count << "}";
+    }
     std::cout << "}\n";
     return 0;
 }

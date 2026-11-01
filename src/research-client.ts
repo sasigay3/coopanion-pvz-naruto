@@ -13,6 +13,7 @@ export interface ResearchProbeRequest {
   pid: number;
   sun?: boolean;
   cards?: boolean;
+  plantArray?: boolean;
 }
 
 async function matchesArtifact(path: string, expected: string): Promise<boolean> {
@@ -36,6 +37,7 @@ export async function runResearchProbe(request: ResearchProbeRequest): Promise<R
       !/^[0-9a-f]{64}$/.test(request.cliSha256) ||
       (request.sun !== undefined && typeof request.sun !== 'boolean') ||
       (request.cards !== undefined && typeof request.cards !== 'boolean') ||
+      (request.plantArray !== undefined && typeof request.plantArray !== 'boolean') ||
       !Number.isSafeInteger(request.pid) || request.pid < 1 || request.pid > 0xffffffff) {
     throw new Error('invalid research probe request');
   }
@@ -44,6 +46,7 @@ export async function runResearchProbe(request: ResearchProbeRequest): Promise<R
   const args = ['--pid', String(request.pid), '--executable', request.executablePath];
   if (request.sun) args.push('--sun');
   if (request.cards) args.push('--cards');
+  if (request.plantArray) args.push('--plant-array');
   return new Promise((resolve, reject) => {
     execFile(request.cliPath, args, { encoding: 'utf8', windowsHide: true, timeout: 15_000, maxBuffer: 4096, shell: false },
       (error, stdout, stderr) => {
