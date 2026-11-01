@@ -15,4 +15,12 @@ if errorlevel 1 exit /b 1
 cl /nologo /EHsc /std:c++17 /W4 /WX /Fe:scratch\native-check\snapshot.exe /Fo:scratch\native-check\snapshot.obj tests\native_candidate_snapshot.cpp
 if errorlevel 1 exit /b 1
 scratch\native-check\snapshot.exe
+if errorlevel 1 exit /b 1
+cl /nologo /EHsc /std:c++17 /W4 /WX /Fe:scratch\native-check\target-file.exe /Fo:scratch\native-check\target-file.obj tests\native_target_file.cpp
+if errorlevel 1 exit /b 1
+scratch\native-check\target-file.exe
+if errorlevel 1 exit /b 1
+cl /nologo /EHsc /std:c++17 /W4 /WX /Fe:scratch\native-check\process.exe /Fo:scratch\native-check\process.obj tests\native_read_only_process.cpp
+if errorlevel 1 exit /b 1
+scratch\native-check\process.exe
 exit /b %errorlevel%

@@ -40,6 +40,12 @@ The bounded probe takes an explicit PID and executable path: `python scripts/pro
 
 A separate C++ research component checks the ten candidate code prefixes, the preferred image base and both candidate vtables before sampling the candidate scene, mode, sun and card count. It repeats pointer, scene, mode and requested-value checks and returns no partial snapshot if they change. The component does not open a process or authenticate its executable and must not be called on a live process until a separate file-and-process identity gate is in place. Checks around sequential reads reduce races; they cannot make the sample atomic or prove any field's game meaning. The World remains disabled. The ten stored prefixes were independently checked against the examined local executable; its implementation has synthetic x86 fixture coverage only and has not been tested against the game.
 
+## Native read-only identity gate
+
+A separate x86 Windows component now opens only an explicitly selected existing PID, with process query and memory-read rights. It verifies the supplied file's size, PE fields and SHA-256, holds its read-only file handle, checks the actual process image and first module against the same file identity, requires an x86 WOW64 process and the examined image layout, and validates the candidate code and vtables before exposing the research snapshot method. The gate cannot start a process, write memory, inject code, create remote threads or send input. Each snapshot repeats the code and object checks. A file's current identity and ten short in-memory prefixes do not prove every loaded byte or associated DLL is trustworthy, and the sequential reads are not atomic.
+
+The native file gate accepted the examined local executable and rejected a synthetic same-size PE with the wrong digest and malformed headers. A process test paired that real file with the test runner's own unrelated PID and confirmed rejection. Synthetic tests exercise bad signatures, object identity, changed pointers, scene transitions and failures without a game. **The native gate has not yet been tested against the actual running target**, and it is not connected to the World. The earlier positive live sample used only the Python research probe.
+
 ## First board and sun candidates
 
 In the same live run, the operator reported the main menu; a sample around that time had zero at candidate offset `0x768` and 1 at `0x7fc`. After the operator entered the first level, these values were nonzero and 3 respectively. A statically observed instruction at RVA `0xb069` writes 150 to offset `0x5560` of an object. Reading that word through the `0x768` pointer yielded 150, matching the operator's reported sun. After the operator planted a plant, the same word read 75, again matching the reported display. This is preliminary correlation, not proof of object type, scene semantics, correct behavior in other modes, or safe writes. Further independent samples, transition and restart checks are needed.
@@ -70,7 +76,7 @@ In an isolated archive of HD commit `f506025`, five selected test files for prot
 | --- | --- |
 | Static PE identity and exact-signature comparison | Implemented; exercised on the supplied file |
 | Static imported-library inventory | Implemented; actual loaded paths not verified |
-| Loaded process identity and bounded candidate-pointer check | Implemented; checked in one live run, object type not established |
+| Loaded process identity and bounded candidate-pointer check | Python probe checked in one live run; native process gate has no positive live test |
 | Scene, board and sun candidates | Python research probe has one live correlation; standalone native snapshot has synthetic tests only |
 | Plant array header candidate | One live correlation; element layout and mode coverage not verified |
 | Bounded native array reader | Implemented and fixture-tested; not connected to the game |
