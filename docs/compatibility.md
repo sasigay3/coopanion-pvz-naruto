@@ -66,6 +66,10 @@ Static code associates candidate board offset `0x144` with an allocated object; 
 
 The operator provided an image of an in-game control console with options labelled automatic collection, free planting, ignore cooldown, health display, and overlapping planting, plus a difficulty setting. The locally supplied text resources describe the auto-collection option as covering sun and coins and describe a keyboard toggle; they also describe free planting and ignoring card cooldown. These descriptions corroborate the labels but do not verify real behavior, persisted state, implementation, or interaction with the extension. In particular, free planting is not the same feature as a sun reserve, a one-shot sun increase, or a bonus per verified sun collection. Future assist work should evaluate existing controls before duplicating functionality, and must independently test each requested feature and its off state.
 
+## Version-independent action safeguards
+
+A prototype input arbiter, action ticket fence and guarded action flow are covered by simulated tests. They serialize competing callers, reject stale sessions and runs before dispatch, require a correlated terminal result plus a newer same-run observation and a caller-supplied visible-effect check before reporting verification, and close the arbiter when native input release is uncertain. Cancellation of an active request does not automatically release the lease. These are building blocks, not a completed queue or a native bridge: their safety depends on the future driver actually rechecking context, confirming native input release, producing immutable fresh snapshots and implementing correct game-specific evidence. They are not connected to the disabled World and have not sent game input.
+
 ## HD baseline reuse checks
 
 In an isolated archive of HD commit `f506025`, five selected test files for protocol, conditions, triggers, executor freshness, and delivery freshness produced 264 passes and one timeout. Instrumenting only the temporary archive showed that the timed-out delivery test received and rendered the intended batch, then hung during cleanup. Starting `world.stop()` while fake timers were active and advancing those timers allowed that single instrumented test to pass. This is evidence about that fixture's cleanup ordering, not a proven fix for production shutdown, other failing tests, or Naruto compatibility. A second isolated selection covering executor, runtime, bridge, lifecycle and automatic collection produced 179 passes and three failures: one expected status object lacks assist fields, one expected receipt text differs from the implementation, and one expects the sun pickup before the coin while the observed call order was reversed. Whether the ordering difference represents a behavioral defect or a stale expectation remains unverified. The original HD checkout was not modified. Review and adapt these components only after target snapshots and action contracts are verified.
@@ -82,6 +86,7 @@ In an isolated archive of HD commit `f506025`, five selected test files for prot
 | Bounded native array reader | Implemented and fixture-tested; not connected to the game |
 | Card-bank count candidate | Static evidence and one live sample; not compared with visible cards |
 | Entity observation | Not implemented |
+| Action arbitration and verification prototype | Synthetic tests only; no native driver or game actions |
 | Menus, selection, board observation and actions | Not implemented |
 | Automated play and special modes | Not implemented |
 | Optional assists | Not implemented |
