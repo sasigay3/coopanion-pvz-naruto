@@ -2,6 +2,7 @@
 
 #include "target_file.h"
 #include "candidate_snapshot.h"
+#include "plant_candidate.h"
 #include <psapi.h>
 #include <string>
 #pragma comment(lib, "psapi.lib")
@@ -108,6 +109,16 @@ public:
             return detail::ReadBounded(process_.get(), address, destination, size);
         };
         return ReadCandidateSnapshot(read, image_base_, options, output);
+    }
+    // Research only: the caller must independently confirm a visible ordinary
+    // daytime board. This is not exposed by the World or CLI.
+    PlantCandidateStatus VisiblePlantCandidates(bool confirmed, std::vector<PlantCandidateWords>& output) const {
+        output.clear();
+        if (!process_) return PlantCandidateStatus::not_ready;
+        auto read = [&](uint32_t address, void* destination, size_t size) {
+            return detail::ReadBounded(process_.get(), address, destination, size);
+        };
+        return ReadVisiblePlantCandidates(read, image_base_, confirmed, output);
     }
     uint32_t image_base() const { return image_base_; }
 private:

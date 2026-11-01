@@ -8,7 +8,8 @@ import { fileURLToPath } from 'node:url';
 const PROJECT_ROOT = fileURLToPath(new URL('../', import.meta.url));
 const BUILD_SCRIPT = join(PROJECT_ROOT, 'scripts', 'build-research.cmd');
 const SOURCE_FILES = [
-  'scripts/build-research.cmd', 'src/research-build.ts', 'src/native/candidate_snapshot.h', 'src/native/read_only_process.h',
+  'scripts/build-research.cmd', 'src/research-build.ts', 'src/native/candidate_snapshot.h', 'src/native/data_array_reader.h',
+  'src/native/plant_candidate.h', 'src/native/read_only_process.h',
   'src/native/research_cli.cpp', 'src/native/research_cli_args.h', 'src/native/target_file.h',
 ] as const;
 const BINARY = 'pvz-naruto-research.exe';

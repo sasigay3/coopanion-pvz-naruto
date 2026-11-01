@@ -16,6 +16,10 @@ cl /nologo /EHsc /std:c++17 /W4 /WX /Fe:scratch\native-check\snapshot.exe /Fo:sc
 if errorlevel 1 exit /b 1
 scratch\native-check\snapshot.exe
 if errorlevel 1 exit /b 1
+cl /nologo /EHsc /std:c++17 /W4 /WX /Fe:scratch\native-check\plant.exe /Fo:scratch\native-check\plant.obj tests\native_plant_candidate.cpp
+if errorlevel 1 exit /b 1
+scratch\native-check\plant.exe
+if errorlevel 1 exit /b 1
 cl /nologo /EHsc /std:c++17 /W4 /WX /Fe:scratch\native-check\target-file.exe /Fo:scratch\native-check\target-file.obj tests\native_target_file.cpp
 if errorlevel 1 exit /b 1
 scratch\native-check\target-file.exe

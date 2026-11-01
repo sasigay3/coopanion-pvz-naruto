@@ -18,6 +18,8 @@ int wmain(int argc, wchar_t** argv) {
     }
     process.Close();
     assert(process.image_base() == 0);
+    std::vector<PlantCandidateWords> empty_check{{}};
+    assert(process.VisiblePlantCandidates(true, empty_check) == PlantCandidateStatus::not_ready && empty_check.empty());
 
     // Exercise the same OS-level file matching and bounded read primitives against
     // this x86 test process only; production must first authenticate its own file.

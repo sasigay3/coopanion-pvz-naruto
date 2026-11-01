@@ -71,6 +71,8 @@ The reader rechecks every scanned slot ID, including free slots, after completin
 
 During the 2026-11-02 isolated first-level test, a native array-header sample reported one live entry while one plant was visible. After a manually controlled planting action, it reported two; the separate Python research sampler returned raw words `(2, 1, 0)` and `(2, 0, 3)` at offsets `0x1c`, `0x24`, `0x28`, corresponding in that view to two visibly different plants in the same row and separate columns. This supports, but does not establish, row, type and column interpretations. The sun value did not visibly decrease during that action; the reason was not investigated and no assist behavior can be inferred. No native action driver was involved.
 
+A native research-only slot sampler now combines the authenticated read-only process wrapper, the bounded array reader, repeated candidate context checks and a required explicit visible-daytime confirmation. It samples at most 16 candidate slots and returns only those three raw words and a slot index; it rejects an unexpected candidate scene, mode, background, header, IDs or changed context. The caller must independently confirm actual visibility: the numeric checks do not establish it. In a second isolated first-level run, a temporary research harness returned `(2, 1, 0)` for the initially visible plant and, after manual planting, `(2, 0, 4)` for a second visible plant at a different column. Both shared save folders still matched the fresh backup afterward. The sampler also has synthetic fixtures but is not exposed by the CLI or World. Its sequential checks cannot provide an atomic snapshot.
+
 The operator's local possible save folders were backed up before the game started. Comparing those folders with the backup after the interaction showed a modified file in one and a missing file in the other. Static inspection later found the missing file's directory and filename pattern in the target executable. That strengthens the possibility of shared save access but does not establish causation or ownership. The folders changed further after that backup; do not restore, overwrite, or delete files automatically. Establish ownership and discuss restoration before changing saves.
 
 ## First card-bank candidate
@@ -104,7 +106,7 @@ In an isolated archive of HD commit `f506025`, five selected test files for prot
 | Loaded process identity and bounded candidate-pointer check | Python and native/client paths checked against live target processes; broad restart and mode coverage remains open |
 | Scene, board and sun candidates | Python and native research paths correlated with a visible daytime level; other modes and transitions remain unverified |
 | Plant array header candidate | Native header matched visible count before and after one planting; element meanings and mode coverage remain unverified |
-| Bounded native array reader | Implemented and fixture-tested; not connected to the game |
+| Bounded native array reader | Fixture-tested; research-only plant sampler checked against two visible plants in one live run, with no World integration |
 | Card-bank count candidate | Static evidence and one live sample; not compared with visible cards |
 | Entity observation | Not implemented |
 | Action arbitration and verification prototype | Synthetic tests only; no native driver or game actions |
