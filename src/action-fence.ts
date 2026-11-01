@@ -18,7 +18,7 @@ export interface ActionTicket {
   readonly submittedRevision: number;
   readonly expiresAtMs: number;
 }
-export type ActionBlock = 'cancelled' | 'expired' | 'stale_context' | 'paused' | 'out_of_order';
+export type ActionBlock = 'cancelled' | 'invalid_ticket' | 'expired' | 'stale_context' | 'paused' | 'out_of_order';
 export type DispatchDecision = { allowed: true } | { allowed: false; reason: ActionBlock };
 export type NativeTerminal =
   | { id: string; outcome: 'executed'; revision: number }
@@ -30,6 +30,10 @@ export type Verification =
 
 function validRevision(value: number): boolean { return Number.isSafeInteger(value) && value >= 0; }
 function validIdentity(value: string): boolean { return typeof value === 'string' && value.length > 0 && value.length <= 128; }
+function validTicket(value: ActionTicket): boolean {
+  return value !== null && typeof value === 'object' && validIdentity(value.id) && validIdentity(value.session)
+    && validIdentity(value.run) && validRevision(value.submittedRevision) && validRevision(value.expiresAtMs);
+}
 function validSnapshot(value: BoardObservation): boolean {
   return value !== null && typeof value === 'object' && validIdentity(value.session) && validIdentity(value.run)
     && validRevision(value.revision) && ['board', 'transition', 'other'].includes(value.phase)
@@ -48,6 +52,7 @@ export function createActionTicket(id: string, observation: BoardObservation, no
 /** Must run on a new observation immediately before any actual input. */
 export function checkBeforeDispatch(ticket: ActionTicket, current: BoardObservation, nowMs: number, cancelled = false): DispatchDecision {
   if (cancelled) return { allowed: false, reason: 'cancelled' };
+  if (!validTicket(ticket)) return { allowed: false, reason: 'invalid_ticket' };
   if (!Number.isSafeInteger(nowMs) || nowMs < 0 || nowMs >= ticket.expiresAtMs) return { allowed: false, reason: 'expired' };
   if (!validSnapshot(current) || current.session !== ticket.session || current.run !== ticket.run || current.phase !== 'board')
     return { allowed: false, reason: 'stale_context' };
@@ -68,6 +73,7 @@ export function verifyAction<TState>(
   after: BoardObservation<TState> | null,
   visibleEffect: (before: TState, after: TState) => boolean,
 ): Verification {
+  if (!validTicket(ticket)) return { status: 'unverified', reason: 'invalid action ticket' };
   if (!validSnapshot(before) || before.phase !== 'board' || before.paused || before.session !== ticket.session ||
       before.run !== ticket.run || before.revision < ticket.submittedRevision)
     return { status: 'unverified', reason: 'invalid pre-action observation' };

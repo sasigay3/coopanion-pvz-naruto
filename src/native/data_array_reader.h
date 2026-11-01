@@ -55,10 +55,13 @@ ArrayStatus ReadArray(Read read, uint32_t address, const ArrayLayout& layout,
         return ArrayStatus::invalid_header;
 
     std::vector<Slot> pending;
+    std::vector<uint32_t> observed_ids;
+    observed_ids.reserve(header.used);
     for (uint32_t i = 0; i < header.used; ++i) {
         const uint32_t slot = header.block + i * layout.stride;
         uint32_t id = 0;
         if (!read(slot + layout.id_offset, &id, sizeof(id))) return ArrayStatus::read_failed;
+        observed_ids.push_back(id);
         if (!(id >> 16) || (id & 0xffffU) != i) continue;
         Slot item{id, {}};
         for (const auto& field : layout.fields) {
@@ -70,6 +73,13 @@ ArrayStatus ReadArray(Read read, uint32_t address, const ArrayLayout& layout,
         if (!read(slot + layout.id_offset, &current_id, sizeof(current_id))) return ArrayStatus::read_failed;
         if (current_id != id) return ArrayStatus::changed;
         pending.push_back(std::move(item));
+    }
+    // Earlier slots (including free slots) may change while later ones are read.
+    for (uint32_t i = 0; i < header.used; ++i) {
+        uint32_t current_id = 0;
+        const uint32_t slot = header.block + i * layout.stride;
+        if (!read(slot + layout.id_offset, &current_id, sizeof(current_id))) return ArrayStatus::read_failed;
+        if (current_id != observed_ids[i]) return ArrayStatus::changed;
     }
     ArrayHeader current{};
     if (!read(address, &current, sizeof(current))) return ArrayStatus::read_failed;

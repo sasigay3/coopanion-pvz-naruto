@@ -73,6 +73,36 @@ int main() {
         return at != block + 0x300 + 0x148 && read(at, out, n);
     };
     assert(ReadArray(fail_second, board, plant, slots) == ArrayStatus::read_failed && slots.empty());
+    // A slot can be replaced after its own field/ID reads while a later slot
+    // is sampled, without changing the array header.
+    auto mixed = header;
+    mixed.used = 2;
+    put(board, &mixed, sizeof(mixed));
+    uint32_t free_id = 0;
+    put(block + 0x300 + 0x148, &free_id, sizeof(free_id));
+    bool replaced = false;
+    auto replace_earlier = [&](uint32_t at, void* out, size_t n) {
+        if (at == block + 0x300 + 0x148 && !replaced) {
+            replaced = true;
+            const uint32_t newer = 0x20000;
+            put(block + 0x148, &newer, sizeof(newer));
+        }
+        return read(at, out, n);
+    };
+    assert(ReadArray(replace_earlier, board, plant, slots) == ArrayStatus::changed && slots.empty());
+    put(block + 0x148, &id, sizeof(id));
+    // A formerly free slot becoming occupied is also a change, even if the
+    // header happens to be unchanged during this synthetic read.
+    unsigned free_reads = 0;
+    auto fill_free_slot = [&](uint32_t at, void* out, size_t n) {
+        if (at == block + 0x300 + 0x148 && ++free_reads == 2) {
+            const uint32_t occupied = 0x10001;
+            std::memcpy(out, &occupied, sizeof(occupied));
+            return true;
+        }
+        return read(at, out, n);
+    };
+    assert(ReadArray(fill_free_slot, board, plant, slots) == ArrayStatus::changed && slots.empty());
     put(board, &header, sizeof(header));
     // A 0x408 stride needs no oversized temporary buffer and remains bounded.
     ArrayLayout other{0x408, 0x404, 2048, 16, {{0x24, 4}}};

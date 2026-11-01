@@ -41,3 +41,12 @@ test('refuses to create a ticket from invalid, paused or non-board observations'
     assert.throws(() => createActionTicket('task-1', state, 1000, 5000));
   assert.throws(() => createActionTicket('task-1', board, 1000, 0));
 });
+
+test('fails closed on malformed tickets even when TypeScript types are bypassed', () => {
+  for (const malformed of [null, undefined, { ...ticket, id: '' },
+    { ...ticket, submittedRevision: NaN }, { ...ticket, expiresAtMs: NaN },
+    { ...ticket, expiresAtMs: undefined }, { ...ticket, session: 42 }]) {
+    assert.deepEqual(checkBeforeDispatch(malformed, board, 1500), { allowed: false, reason: 'invalid_ticket' });
+    assert.equal(verifyAction(malformed, board, null, null, () => true).status, 'unverified');
+  }
+});
