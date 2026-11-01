@@ -16,6 +16,7 @@ Reproduce the static PE and exact-byte scan locally with Python 3:
 ```powershell
 python scripts/inspect_pe.py <path-to-game-exe> --compare-profile <path-to-hd-profile.h>
 python scripts/inspect_imports.py <path-to-game-exe>
+python scripts/inspect_input_candidates.py <path-to-game-exe>
 python -m unittest discover -s tests
 scripts/test-native.cmd
 ```
@@ -73,6 +74,12 @@ Static code associates candidate board offset `0x144` with an allocated object; 
 ## Operator-provided control console
 
 The operator provided an image of an in-game control console with options labelled automatic collection, free planting, ignore cooldown, health display, and overlapping planting, plus a difficulty setting. The locally supplied text resources describe the auto-collection option as covering sun and coins and describe a keyboard toggle; they also describe free planting and ignoring card cooldown. These descriptions corroborate the labels but do not verify real behavior, persisted state, implementation, or interaction with the extension. In particular, free planting is not the same feature as a sun reserve, a one-shot sun increase, or a bonus per verified sun collection. Future assist work should evaluate existing controls before duplicating functionality, and must independently test each requested feature and its off state.
+
+## Preliminary input code candidates
+
+Read-only inspection of the identified executable found a type-name string consistent with `Sexy::WidgetManager`, a candidate vtable at preferred-base VA `0x66f8b4`, and code writing that value at RVAs `0x1384d2` and `0x13861b`. Nearby code at RVAs `0x1392e0`, `0x139390`, and `0x1394a0` has patterns similar to mouse-up, mouse-down and mouse-move respectively, when compared with the independently published [reference implementation](https://github.com/Patoke/re-plants-vs-zombies/blob/c4692036c5e11d227c8fb7c593b734dac96da028/SexyAppFramework/widget/WidgetManager.cpp). This is structural resemblance, not proof of identity, correctness, visibility, or safe calling conventions.
+
+The candidate functions appear to use different register and stack arrangements from one another. In particular, the candidate at `0x1394a0` copies EDX into the object register, while the candidate at `0x139390` copies ECX and the one at `0x1392e0` copies EAX. Several candidate callers load that register from an enclosing object's offset `0x320`; whether this is the observed root object still needs verification. This is static evidence against assuming one ordinary member-function calling convention for all three; argument placement and the required caller context remain unverified. The vtable does not establish the addresses of these non-virtual methods. The input-candidate audit checks the pinned file digest, five short code prefixes and seven relative call targets, without disassembly or process access. Its success only reproduces those byte-level observations; it does not prove instruction boundaries, meanings, or safe execution. No function has been called, and these candidates are not an action profile. Live context, actual callers, input release, coordinates and behavior across transitions still require independent verification before implementing a driver.
 
 ## Version-independent action safeguards
 
