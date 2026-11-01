@@ -23,4 +23,13 @@ if errorlevel 1 exit /b 1
 cl /nologo /EHsc /std:c++17 /W4 /WX /Fe:scratch\native-check\process.exe /Fo:scratch\native-check\process.obj tests\native_read_only_process.cpp
 if errorlevel 1 exit /b 1
 scratch\native-check\process.exe
-exit /b %errorlevel%
+if errorlevel 1 exit /b 1
+cl /nologo /EHsc /std:c++17 /W4 /WX /Fe:scratch\native-check\cli-args.exe /Fo:scratch\native-check\cli-args.obj tests\native_cli_args.cpp
+if errorlevel 1 exit /b 1
+scratch\native-check\cli-args.exe
+if errorlevel 1 exit /b 1
+cl /nologo /EHsc /std:c++17 /W4 /WX /Fe:scratch\native-check\research-cli.exe /Fo:scratch\native-check\research-cli.obj src\native\research_cli.cpp
+if errorlevel 1 exit /b 1
+scratch\native-check\research-cli.exe >nul
+if not errorlevel 1 exit /b 1
+exit /b 0

@@ -44,7 +44,7 @@ A separate C++ research component checks the ten candidate code prefixes, the pr
 
 A separate x86 Windows component now opens only an explicitly selected existing PID, with process query and memory-read rights. It verifies the supplied file's size, PE fields and SHA-256, holds its read-only file handle, checks the actual process image and first module against the same file identity, requires an x86 WOW64 process and the examined image layout, and validates the candidate code and vtables before exposing the research snapshot method. The gate cannot start a process, write memory, inject code, create remote threads or send input. Each snapshot repeats the code and object checks. A file's current identity and ten short in-memory prefixes do not prove every loaded byte or associated DLL is trustworthy, and the sequential reads are not atomic.
 
-The native file gate accepted the examined local executable and rejected a synthetic same-size PE with the wrong digest and malformed headers. A process test paired that real file with the test runner's own unrelated PID and confirmed rejection. Synthetic tests exercise bad signatures, object identity, changed pointers, scene transitions and failures without a game. **The native gate has not yet been tested against the actual running target**, and it is not connected to the World. The earlier positive live sample used only the Python research probe.
+The native file gate accepted the examined local executable and rejected a synthetic same-size PE with the wrong digest and malformed headers. A standalone research CLI combines this gate with the candidate reader and emits bounded candidate-only JSON. Its argument validation and rejection of an unrelated process have been tested; it is not a World tool and does not launch the game. A separate TypeScript parser rejects malformed, excessive, or unexpected responses instead of treating them as game state. A process test paired that real file with the test runner's own unrelated PID and confirmed rejection. Synthetic tests exercise bad signatures, object identity, changed pointers, scene transitions and failures without a game. **The native gate has not yet been tested against the actual running target**, and it is not connected to the World. The earlier positive live sample used only the Python research probe.
 
 ## First board and sun candidates
 
@@ -75,7 +75,7 @@ In an isolated archive of HD commit `f506025`, five selected test files for prot
 | Capability | Status |
 | --- | --- |
 | Static PE identity and exact-signature comparison | Implemented; exercised on the supplied file |
-| Static imported-library inventory | Implemented; actual loaded paths not verified |
+| Static imported-library inventory | Implemented; some local modules observed in one run, later loads unverified |
 | Loaded process identity and bounded candidate-pointer check | Python probe checked in one live run; native process gate has no positive live test |
 | Scene, board and sun candidates | Python research probe has one live correlation; standalone native snapshot has synthetic tests only |
 | Plant array header candidate | One live correlation; element layout and mode coverage not verified |
